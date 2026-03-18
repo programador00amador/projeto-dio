@@ -1,0 +1,174 @@
+
+
+const readline = require('readline');
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+
+const TRACK_LENGTH = 20;
+
+const items = [
+  'boost',
+  'banana',
+  'shell'
+];
+
+
+
+class Player {
+  constructor(name, isUser = false) {
+    this.name = name;
+    this.position = 0;
+    this.speed = Math.floor(Math.random() * 3) + 1;
+    this.item = null;
+    this.isUser = isUser;
+    this.stunned = 0;
+  }
+
+  rollSpeed() {
+    if (this.stunned > 0) {
+      this.stunned--;
+      return 0;
+    }
+    return Math.floor(Math.random() * 3) + 1;
+  }
+
+  getItem() {
+    this.item = items[Math.floor(Math.random() * items.length)];
+  }
+}
+
+
+class Game {
+  constructor() {
+    this.players = [
+      new Player('Você', true),
+      new Player('Mario'),
+      new Player('Luigi'),
+      new Player('Peach')
+    ];
+
+    this.turn = 1;
+  }
+
+  async start() {
+    console.log('\n🏁 Corrida iniciando!\n');
+
+    while (!this.finished()) {
+      console.log(`\n--- Turno ${this.turn} ---`);
+      await this.playTurn();
+      this.showPositions();
+      this.turn++;
+    }
+
+    this.showWinner();
+    rl.close();
+  }
+
+  finished() {
+    return this.players.some(p => p.position >= TRACK_LENGTH);
+  }
+
+  async playTurn() {
+    for (let player of this.players) {
+      let speed = player.rollSpeed();
+
+      if (Math.random() < 0.3) {
+        player.getItem();
+      }
+
+      if (player.isUser) {
+        await this.handleUser(player);
+      } else {
+        this.handleAI(player);
+      }
+
+      player.position += speed;
+    }
+  }
+
+  handleAI(player) {
+    if (!player.item) return;
+
+    if (player.item === 'boost') {
+      player.position += 2;
+    }
+
+    if (player.item === 'shell') {
+      let target = this.getLeader();
+      if (target !== player) {
+        target.stunned = 1;
+      }
+    }
+
+    player.item = null;
+  }
+
+  async handleUser(player) {
+    if (!player.item) return;
+
+    await new Promise(resolve => {
+      console.log(`\nVocê tem um item: ${player.item}`);
+      rl.question('Deseja usar? (s/n): ', answer => {
+        if (answer.toLowerCase() === 's') {
+          this.useItem(player);
+        }
+        player.item = null;
+        resolve();
+      });
+    });
+  }
+
+  useItem(player) {
+    if (player.item === 'boost') {
+      console.log('🚀 Boost ativado!');
+      player.position += 3;
+    }
+
+    if (player.item === 'banana') {
+      let target = this.getAhead(player);
+      if (target) {
+        console.log(`🍌 ${target.name} escorregou!`);
+        target.stunned = 1;
+      }
+    }
+
+    if (player.item === 'shell') {
+      let target = this.getLeader();
+      console.log(`🐢 Casco lançado em ${target.name}!`);
+      target.stunned = 2;
+    }
+  }
+
+  getLeader() {
+    return this.players.reduce((a, b) => a.position > b.position ? a : b);
+  }
+
+  getAhead(player) {
+    return this.players
+      .filter(p => p.position > player.position)
+      .sort((a, b) => a.position - b.position)[0];
+  }
+
+  showPositions() {
+    console.log('\nPosições:');
+
+    const ranking = [...this.players].sort((a, b) => b.position - a.position);
+
+    ranking.forEach((p, index) => {
+      console.log(`${index + 1}º - ${p.name} (${p.position})`);
+    });
+  }
+
+  showWinner() {
+    const winner = this.getLeader();
+    console.log(`\n🏆 Vencedor: ${winner.name}!`);
+  }
+}
+
+
+const game = new Game();
+game.start();
