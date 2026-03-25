@@ -1,0 +1,178 @@
+carrinho/
+│
+├── app.js
+├── cart.js
+├── product.js
+└── utils.js
+
+
+class Product {
+  constructor(id, name, price) {
+    this.id = id;
+    this.name = name;
+    this.price = price;
+  }
+}
+
+module.exports = Product;
+
+class Cart {
+  constructor() {
+    this.items = [];
+  }
+
+  addProduct(product, quantity = 1) {
+    const existing = this.items.find(item => item.product.id === product.id);
+
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      this.items.push({ product, quantity });
+    }
+  }
+
+  removeProduct(productId) {
+    this.items = this.items.filter(item => item.product.id !== productId);
+  }
+
+  updateQuantity(productId, quantity) {
+    const item = this.items.find(item => item.product.id === productId);
+    if (item) {
+      item.quantity = quantity;
+    }
+  }
+
+  getTotal() {
+    return this.items.reduce((total, item) => {
+      return total + item.product.price * item.quantity;
+    }, 0);
+  }
+
+  getTotalItems() {
+    return this.items.reduce((total, item) => total + item.quantity, 0);
+  }
+
+  showCart() {
+    console.log("\n🛒 Carrinho:");
+
+    if (this.items.length === 0) {
+      console.log("Carrinho vazio.");
+      return;
+    }
+
+    this.items.forEach(item => {
+      console.log(
+        `${item.product.id} - ${item.product.name} | Qtd: ${item.quantity} | R$ ${item.product.price}`
+      );
+    });
+
+    console.log(`\nTotal de itens: ${this.getTotalItems()}`);
+    console.log(`Total: R$ ${this.getTotal().toFixed(2)}\n`);
+  }
+}
+
+module.exports = Cart;
+
+
+
+const readline = require("readline");
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+function ask(question) {
+  return new Promise(resolve => {
+    rl.question(question, answer => resolve(answer));
+  });
+}
+
+module.exports = { rl, ask };
+
+
+
+
+const Cart = require("./cart");
+const Product = require("./product");
+const { rl, ask } = require("./utils");
+
+const cart = new Cart();
+
+// Produtos simulados (tipo catálogo Shopee)
+const products = [
+  new Product(1, "Camisa", 50),
+  new Product(2, "Tênis", 200),
+  new Product(3, "Boné", 30),
+  new Product(4, "Calça", 120)
+];
+
+function showProducts() {
+  console.log("\n📦 Produtos disponíveis:");
+  products.forEach(p => {
+    console.log(`${p.id} - ${p.name} | R$ ${p.price}`);
+  });
+}
+
+async function menu() {
+  while (true) {
+    console.log(`
+=== MENU ===
+1 - Ver produtos
+2 - Adicionar ao carrinho
+3 - Remover produto
+4 - Atualizar quantidade
+5 - Ver carrinho
+6 - Sair
+`);
+
+    const option = await ask("Escolha uma opção: ");
+
+    switch (option) {
+      case "1":
+        showProducts();
+        break;
+
+      case "2":
+        showProducts();
+        const addId = parseInt(await ask("ID do produto: "));
+        const addQty = parseInt(await ask("Quantidade: "));
+
+        const productToAdd = products.find(p => p.id === addId);
+        if (productToAdd) {
+          cart.addProduct(productToAdd, addQty);
+          console.log("✅ Produto adicionado!");
+        } else {
+          console.log("❌ Produto não encontrado.");
+        }
+        break;
+
+      case "3":
+        const removeId = parseInt(await ask("ID para remover: "));
+        cart.removeProduct(removeId);
+        console.log("🗑 Produto removido.");
+        break;
+
+      case "4":
+        const updateId = parseInt(await ask("ID do produto: "));
+        const newQty = parseInt(await ask("Nova quantidade: "));
+        cart.updateQuantity(updateId, newQty);
+        console.log("🔄 Quantidade atualizada.");
+        break;
+
+      case "5":
+        cart.showCart();
+        break;
+
+      case "6":
+        console.log("👋 Saindo...");
+        rl.close();
+        return;
+
+      default:
+        console.log("❌ Opção inválida.");
+    }
+  }
+}
+
+menu();
