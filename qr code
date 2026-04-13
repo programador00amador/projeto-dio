@@ -1,0 +1,36 @@
+const QRCode = require("qrcode");
+const readline = require("readline-sync");
+const fs = require("fs");
+
+// Função principal
+async function gerarQRCode() {
+  console.log("\n=== GERADOR DE QR CODE PARA E-COMMERCE ===\n");
+
+  // Entrada do usuário
+  const link = readline.question("Digite o link do produto: ");
+  const nomeArquivo = readline.question("Nome do arquivo (sem extensão): ");
+
+  if (!link) {
+    console.log("❌ Link inválido!");
+    return;
+  }
+
+  const outputPath = `./${nomeArquivo || "qrcode"}.png`;
+
+  try {
+    await QRCode.toFile(outputPath, link, {
+      color: {
+        dark: "#000000",
+        light: "#ffffff",
+      },
+      width: 300,
+    });
+
+    console.log(`\n✅ QR Code gerado com sucesso!`);
+    console.log(`📁 Arquivo salvo em: ${outputPath}`);
+  } catch (error) {
+    console.error("❌ Erro ao gerar QR Code:", error);
+  }
+}
+
+gerarQRCode();
